@@ -8,6 +8,7 @@ import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick, onMouseOver)
 import Json.Decode as Decode
 import Json.Encode as Encodev
+import Mouse exposing (MouseEvent, onMouse)
 import Random
 
 
@@ -27,13 +28,6 @@ type alias Model =
     , x : Float
     , y : Float
     , lightness : Float
-    }
-
-
-type alias MouseEvent =
-    { clientX : Float
-    , clientY : Float
-    , deltaY : Maybe Float
     }
 
 
@@ -62,24 +56,6 @@ port updateColor : String -> Cmd msg
 
 subscriptions _ =
     Sub.none
-
-
-onMouse : String -> (MouseEvent -> msg) -> Attribute msg
-onMouse event msg =
-    Html.Events.on ("mouse" ++ String.toLower event) (wrapMouseEvent msg)
-
-
-mouseEventDecoder : Decode.Decoder MouseEvent
-mouseEventDecoder =
-    Decode.map3 MouseEvent
-        (Decode.field "clientX" Decode.float)
-        (Decode.field "clientY" Decode.float)
-        (Decode.maybe (Decode.field "deltaY" Decode.float))
-
-
-wrapMouseEvent : (MouseEvent -> msg) -> Decode.Decoder msg
-wrapMouseEvent msg =
-    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (msg x))
 
 
 randomColor =
