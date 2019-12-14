@@ -8,15 +8,22 @@
   </head>
 
   <body>
-    <div id="elm-code-is-loaded-here"></div>
+    <div id="elm"></div>
+    <script src="mqttws31.min.js"></script>
     <script src="elm.js"></script>
     <script>
+      var client = new Paho.MQTT.Client("broker.hivemq.com", 8000, "rgbweb");
+      client.onConnectionLost = ev => console.log("connection lost", ev);
+      client.connect({onSuccess:() => console.log("connected to mqtt broker")});
+
       var app = Elm.Main.init({
-        node: document.getElementById("elm-code-is-loaded-here"),
+        node: document.getElementById("elm"),
         flags: {width: window.innerWidth, height: window.innerHeight}
       });
+
       app.ports.updateColor.subscribe(function(data) {
         console.log(data);
+        client.send("/foobert/rgb", data, 0, true);
       });
     </script>
   </body>
