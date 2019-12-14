@@ -13,8 +13,18 @@
     <script src="elm.js"></script>
     <script>
       var client = new Paho.MQTT.Client("wss://mqtt.eclipse.org/mqtt", "rgbweb");
-      client.onConnectionLost = ev => console.log("connection lost", ev);
-      client.connect({onSuccess:() => console.log("connected to mqtt broker")});
+      var keepalive = null;
+      client.onConnectionLost = ev => {
+        console.log("connection lost", ev);
+        if (keepalive) {
+          clearInterval(keepalive);
+          keepalive = null;
+        }
+      };
+      client.connect({onSuccess:() => {
+        console.log("connected to mqtt broker");
+        keepalive = setInterval(() => client.send("/keepalive", "", 0, false), 30000);
+      }});
 
       var app = Elm.Main.init({
         node: document.getElementById("elm"),
