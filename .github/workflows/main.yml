@@ -1,0 +1,26 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setup Elm
+        uses: justgook/setup-elm@v1
+      - name: Build application
+        run: |
+          elm make src/Main.elm --optimize --output elm.js
+          mkdir -p public
+          cp elm.js public
+          cp index.html index.css mqttws31.min.js public
+      - name: Deploy
+        if: success()
+        uses: crazy-max/ghaction-github-pages@v1
+        with:
+          target_branch: gh-pages
+          build_dir: public
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_PAT: ${{ secrets.deployment }}
