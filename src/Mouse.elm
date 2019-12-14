@@ -2,7 +2,7 @@ module Mouse exposing (MouseEvent, onMouse)
 
 import Html
 import Html.Events
-import Json.Decode as Decode
+import Json.Decode exposing (Decoder, andThen, field, float, map3, maybe, succeed)
 
 
 type alias MouseEvent =
@@ -17,14 +17,14 @@ onMouse event msg =
     Html.Events.on ("mouse" ++ String.toLower event) (wrapMouseEvent msg)
 
 
-mouseEventDecoder : Decode.Decoder MouseEvent
+mouseEventDecoder : Decoder MouseEvent
 mouseEventDecoder =
-    Decode.map3 MouseEvent
-        (Decode.field "clientX" Decode.float)
-        (Decode.field "clientY" Decode.float)
-        (Decode.maybe (Decode.field "deltaY" Decode.float))
+    map3 MouseEvent
+        (field "clientX" float)
+        (field "clientY" float)
+        (maybe (field "deltaY" float))
 
 
-wrapMouseEvent : (MouseEvent -> msg) -> Decode.Decoder msg
+wrapMouseEvent : (MouseEvent -> msg) -> Decoder msg
 wrapMouseEvent msg =
-    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (msg x))
+    mouseEventDecoder |> andThen (\x -> succeed (msg x))
