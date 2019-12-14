@@ -2,6 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Color exposing (Color)
+import Debug
 import Html exposing (..)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick, onMouseOver)
@@ -23,19 +24,23 @@ type alias Model =
     { currentColor : Color
     , width : Float
     , height : Float
+    , lightness : Float
     }
 
 
 type alias MouseEvent =
     { clientX : Float
     , clientY : Float
+    , deltaY : Maybe Float
     }
 
 
 type Msg
     = MouseMoved MouseEvent
+    | MouseWheeled MouseEvent
     | InitColor Color
     | SelectColor
+    | UpdateColor
 
 
 init : { width : Float, height : Float } -> ( Model, Cmd Msg )
@@ -43,6 +48,7 @@ init flags =
     ( { currentColor = fromHSL 0 0 50
       , width = flags.width
       , height = flags.height
+      , lightness = 50
       }
     , Random.generate InitColor randomColor
     )
@@ -56,18 +62,26 @@ subscriptions _ =
 
 
 onMouseMove =
-    Html.Events.on "mousemove" mouseDecoder
+    Html.Events.on "mousemove" foo1
 
 
-mouseDecoder =
-    Decode.map2 MouseEvent
+onMouseWheel =
+    Html.Events.on "mousewheel" foo2
+
+
+mouseEventDecoder =
+    Decode.map3 MouseEvent
         (Decode.field "clientX" Decode.float)
         (Decode.field "clientY" Decode.float)
-        |> Decode.andThen wrapPick
+        (Decode.maybe (Decode.field "deltaY" Decode.float))
 
 
-wrapPick mouseEvent =
-    Decode.succeed (MouseMoved mouseEvent)
+foo1 =
+    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (MouseMoved (Debug.log "y" x)))
+
+
+foo2 =
+    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (MouseWheeled x))
 
 
 randomColor =
@@ -83,7 +97,7 @@ calculateColor model mouseEvent =
     fromHSL
         ((mouseEvent.clientX / model.width) * 360)
         (100 - (mouseEvent.clientY / model.height) * 100)
-        50
+        model.lightness
 
 
 fromHSL : Float -> Float -> Float -> Color
@@ -104,6 +118,27 @@ update msg model =
             in
             ( { model | currentColor = newColor }, Cmd.none )
 
+        MouseWheeled ev ->
+            case ev.deltaY of
+                Just y ->
+                    let
+                        l =
+                            max 0 (min 100 (model.lightness + y / 10))
+
+                        newModel =
+                            { model | lightness = l }
+
+                        newColor =
+                            calculateColor newModel ev
+                    in
+                    ( { model | currentColor = newColor, lightness = l }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UpdateColor ->
+            ( Debug.log "update" model, Cmd.none )
+
         SelectColor ->
             ( model, updateColor (Color.toHex model.currentColor) )
 
@@ -112,6 +147,7 @@ view model =
     div
         [ id "picker"
         , onMouseMove
+        , onMouseWheel
         , onClick SelectColor
         , style "backgroundColor" (Color.toRGBString model.currentColor)
         ]
