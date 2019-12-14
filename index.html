@@ -12,7 +12,7 @@
     <script src="mqttws31.min.js"></script>
     <script src="elm.js"></script>
     <script>
-      var client = new Paho.MQTT.Client("mqtt.eclipse.org", 443, "rgbweb");
+      var client = new Paho.MQTT.Client("wss://mqtt.eclipse.org/mqtt", "rgbweb");
       client.onConnectionLost = ev => console.log("connection lost", ev);
       client.connect({onSuccess:() => console.log("connected to mqtt broker")});
 
