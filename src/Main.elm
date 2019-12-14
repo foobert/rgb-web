@@ -64,14 +64,12 @@ subscriptions _ =
     Sub.none
 
 
-onMouseMove =
-    Html.Events.on "mousemove" foo1
+onMouse : String -> (MouseEvent -> msg) -> Attribute msg
+onMouse event msg =
+    Html.Events.on ("mouse" ++ String.toLower event) (wrapMouseEvent msg)
 
 
-onMouseWheel =
-    Html.Events.on "mousewheel" foo2
-
-
+mouseEventDecoder : Decode.Decoder MouseEvent
 mouseEventDecoder =
     Decode.map3 MouseEvent
         (Decode.field "clientX" Decode.float)
@@ -79,12 +77,9 @@ mouseEventDecoder =
         (Decode.maybe (Decode.field "deltaY" Decode.float))
 
 
-foo1 =
-    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (MouseMoved (Debug.log "y" x)))
-
-
-foo2 =
-    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (MouseWheeled x))
+wrapMouseEvent : (MouseEvent -> msg) -> Decode.Decoder msg
+wrapMouseEvent msg =
+    mouseEventDecoder |> Decode.andThen (\x -> Decode.succeed (msg x))
 
 
 randomColor =
@@ -142,8 +137,8 @@ update msg model =
 view model =
     div
         [ id "picker"
-        , onMouseMove
-        , onMouseWheel
+        , onMouse "move" MouseMoved
+        , onMouse "wheel" MouseWheeled
         , onClick SelectColor
         , style "backgroundColor" (Color.toRGBString model.currentColor)
         ]
