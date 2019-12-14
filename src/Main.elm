@@ -24,6 +24,8 @@ type alias Model =
     { currentColor : Color
     , width : Float
     , height : Float
+    , x : Float
+    , y : Float
     , lightness : Float
     }
 
@@ -40,7 +42,6 @@ type Msg
     | MouseWheeled MouseEvent
     | InitColor Color
     | SelectColor
-    | UpdateColor
 
 
 init : { width : Float, height : Float } -> ( Model, Cmd Msg )
@@ -48,6 +49,8 @@ init flags =
     ( { currentColor = fromHSL 0 0 50
       , width = flags.width
       , height = flags.height
+      , x = 0
+      , y = 0
       , lightness = 50
       }
     , Random.generate InitColor randomColor
@@ -92,11 +95,10 @@ randomColor =
         (Random.constant 50.0)
 
 
-calculateColor : Model -> MouseEvent -> Color
-calculateColor model mouseEvent =
+calculateColor model =
     fromHSL
-        ((mouseEvent.clientX / model.width) * 360)
-        (100 - (mouseEvent.clientY / model.height) * 100)
+        ((model.x / model.width) * 360)
+        (100 - (model.y / model.height) * 100)
         model.lightness
 
 
@@ -113,31 +115,25 @@ update msg model =
 
         MouseMoved ev ->
             let
-                newColor =
-                    calculateColor model ev
+                newModel =
+                    { model | x = ev.clientX, y = ev.clientY }
             in
-            ( { model | currentColor = newColor }, Cmd.none )
+            ( { newModel | currentColor = calculateColor newModel }, Cmd.none )
 
         MouseWheeled ev ->
             case ev.deltaY of
-                Just y ->
+                Just dy ->
                     let
                         l =
-                            max 0 (min 100 (model.lightness + y / 10))
+                            max 0 (min 100 (model.lightness + dy / 10))
 
                         newModel =
                             { model | lightness = l }
-
-                        newColor =
-                            calculateColor newModel ev
                     in
-                    ( { model | currentColor = newColor, lightness = l }, Cmd.none )
+                    ( { newModel | currentColor = calculateColor newModel }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
-
-        UpdateColor ->
-            ( Debug.log "update" model, Cmd.none )
 
         SelectColor ->
             ( model, updateColor (Color.toHex model.currentColor) )
