@@ -6,9 +6,11 @@ import Debug
 import Html exposing (..)
 import Html.Attributes exposing (class, id, style)
 import Html.Events exposing (onClick, onMouseOver)
+import Html.Events.Extra.Mouse as Mouse
+import Html.Events.Extra.Touch as Touch
+import Html.Events.Extra.Wheel as Wheel
 import Json.Decode as Decode
 import Json.Encode as Encodev
-import Mouse exposing (MouseEvent, onMouse)
 import Random
 import Rgb
 
@@ -29,6 +31,13 @@ type alias Model =
     , x : Float
     , y : Float
     , lightness : Float
+    }
+
+
+type alias MouseEvent =
+    { clientX : Float
+    , clientY : Float
+    , deltaY : Maybe Float
     }
 
 
@@ -91,11 +100,32 @@ update msg model =
             ( model, updateColor (Color.toHex model.currentColor) )
 
 
+touchCoordinates touchEvent =
+    let
+        pos =
+            List.head touchEvent.changedTouches
+                |> Maybe.map .clientPos
+                |> Maybe.withDefault ( 0, 0 )
+    in
+    { clientX = Tuple.first pos, clientY = Tuple.second pos, deltaY = Nothing }
+
+
+mouseCoordinates ev =
+    { clientX = Tuple.first ev.clientPos, clientY = Tuple.second ev.clientPos, deltaY = Nothing }
+
+
+wheelCoordinates : Wheel.Event -> MouseEvent
+wheelCoordinates ev =
+    { clientX = 0, clientY = 0, deltaY = Just ev.deltaY }
+
+
 view model =
     div
         [ id "picker"
-        , onMouse "move" MouseMoved
-        , onMouse "wheel" MouseWheeled
+        , Mouse.onMove (MouseMoved << mouseCoordinates)
+        , Touch.onMove (MouseMoved << touchCoordinates)
+        , Touch.onEnd (\_ -> SelectColor)
+        , Wheel.onWheel (MouseWheeled << wheelCoordinates)
         , onClick SelectColor
         , style "backgroundColor" (Color.toRGBString model.currentColor)
         ]
