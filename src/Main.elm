@@ -34,17 +34,14 @@ type alias Model =
     }
 
 
-type alias MouseEvent =
-    { clientX : Float
-    , clientY : Float
-    , deltaY : Maybe Float
-    }
+type alias Position =
+    { x : Float, y : Float }
 
 
 type Msg
-    = MouseMoved MouseEvent
-    | MouseWheeled MouseEvent
-    | InitColor Color
+    = InitColor Color
+    | UpdatePosition Position
+    | UpdateLightness Float
     | SelectColor
 
 
@@ -74,27 +71,22 @@ update msg model =
         InitColor c ->
             ( { model | currentColor = c }, Cmd.none )
 
-        MouseMoved ev ->
+        UpdatePosition pos ->
             let
                 newModel =
-                    { model | x = ev.clientX, y = ev.clientY }
+                    { model | x = pos.x, y = pos.y }
             in
             ( { newModel | currentColor = Rgb.calculateColor newModel }, Cmd.none )
 
-        MouseWheeled ev ->
-            case ev.deltaY of
-                Just dy ->
-                    let
-                        l =
-                            max 0 (min 100 (model.lightness + dy / 10))
+        UpdateLightness dy ->
+            let
+                l =
+                    max 0 (min 100 (model.lightness + dy / 10))
 
-                        newModel =
-                            { model | lightness = l }
-                    in
-                    ( { newModel | currentColor = Rgb.calculateColor newModel }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
+                newModel =
+                    { model | lightness = l }
+            in
+            ( { newModel | currentColor = Rgb.calculateColor newModel }, Cmd.none )
 
         SelectColor ->
             ( model, updateColor (Color.toHex model.currentColor) )
@@ -102,30 +94,29 @@ update msg model =
 
 touchCoordinates touchEvent =
     let
-        pos =
+        ( x, y ) =
             List.head touchEvent.changedTouches
                 |> Maybe.map .clientPos
                 |> Maybe.withDefault ( 0, 0 )
     in
-    { clientX = Tuple.first pos, clientY = Tuple.second pos, deltaY = Nothing }
+    Position x y
 
 
 mouseCoordinates ev =
-    { clientX = Tuple.first ev.clientPos, clientY = Tuple.second ev.clientPos, deltaY = Nothing }
-
-
-wheelCoordinates : Wheel.Event -> MouseEvent
-wheelCoordinates ev =
-    { clientX = 0, clientY = 0, deltaY = Just ev.deltaY }
+    let
+        ( x, y ) =
+            ev.clientPos
+    in
+    Position x y
 
 
 view model =
     div
         [ id "picker"
-        , Mouse.onMove (MouseMoved << mouseCoordinates)
-        , Touch.onMove (MouseMoved << touchCoordinates)
+        , Mouse.onMove (UpdatePosition << mouseCoordinates)
+        , Touch.onMove (UpdatePosition << touchCoordinates)
         , Touch.onEnd (\_ -> SelectColor)
-        , Wheel.onWheel (MouseWheeled << wheelCoordinates)
+        , Wheel.onWheel (\ev -> UpdateLightness ev.deltaY)
         , onClick SelectColor
         , style "backgroundColor" (Color.toRGBString model.currentColor)
         ]
